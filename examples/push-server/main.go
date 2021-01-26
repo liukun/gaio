@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/xtaci/gaio"
+	"github.com/liukun/gaio"
 )
 
 func main() {

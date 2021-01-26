@@ -571,6 +571,9 @@ func Test4kTiny(t *testing.T) {
 }
 
 func testParallel(t *testing.T, par int, msgsize int) {
+	if par > 1024 {
+		par = 1024
+	}
 	t.Log("testing concurrent:", par, "connections")
 	ln := echoServer(t, msgsize)
 	defer ln.Close()
@@ -645,6 +648,9 @@ func Test10kCompleteSwapBuffer(t *testing.T) {
 }
 
 func testParallelRandomInternal(t *testing.T, par int, msgsize int, allswap bool) {
+	if par > 1024 {
+		par = 1024
+	}
 	t.Log("testing concurrent:", par, "connections")
 	ln := echoServer(t, msgsize)
 	defer ln.Close()
@@ -735,6 +741,9 @@ func TestDeadline8k(t *testing.T) {
 }
 
 func testDeadline(t *testing.T, par int) {
+	if par > 1024 {
+		par = 1024
+	}
 	t.Log("testing concurrent:", par, "unresponsive connections")
 	ln := echoServer(t, 128)
 	defer ln.Close()

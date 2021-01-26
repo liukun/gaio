@@ -45,6 +45,8 @@ const (
 	OpRead OpType = iota
 	// OpWrite means the aiocb is a write operation
 	OpWrite
+	// OpDetach detach the connection from a Watcher
+	OpDetach
 	// internal operation to delete an related resource
 	opDelete
 )

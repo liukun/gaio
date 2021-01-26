@@ -211,8 +211,14 @@ func (w *watcher) WriteTimeout(ctx interface{}, conn net.Conn, buf []byte, deadl
 	return w.aioCreate(ctx, OpWrite, conn, buf, deadline, false)
 }
 
+// Detach let the watcher to release resources related to this conn immediately, but not close the conn.
+// Then deliver the duplicated conn's `fd` in `size` field as a event.
+func (w *watcher) Detach(conn net.Conn) error {
+	return w.aioCreate(nil, OpDetach, conn, nil, zeroTime, false)
+}
+
 // Free let the watcher to release resources related to this conn immediately,
-// like socket file descriptors.
+// like socket file descriptors, and close the connection.
 func (w *watcher) Free(conn net.Conn) error {
 	return w.aioCreate(nil, opDelete, conn, nil, zeroTime, false)
 }
@@ -336,7 +342,7 @@ func (w *watcher) tryWrite(fd int, pcb *aiocb) bool {
 }
 
 // release connection related resources
-func (w *watcher) releaseConn(ident int) {
+func (w *watcher) releaseConn(ident int, close bool) {
 	if desc, ok := w.descs[ident]; ok {
 		// delete from heap
 		for e := desc.readers.Front(); e != nil; e = e.Next() {
@@ -356,7 +362,9 @@ func (w *watcher) releaseConn(ident int) {
 		delete(w.descs, ident)
 		delete(w.connIdents, desc.ptr)
 		// close socket file descriptor duplicated from net.Conn
-		syscall.Close(ident)
+		if close {
+			_ = syscall.Close(ident)
+		}
 	}
 }
 
@@ -393,7 +401,7 @@ func (w *watcher) loop() {
 	// defer function to release all resources
 	defer func() {
 		for ident := range w.descs {
-			w.releaseConn(ident)
+			w.releaseConn(ident, true)
 		}
 	}()
 
@@ -439,7 +447,7 @@ func (w *watcher) loop() {
 				if ident, ok := w.connIdents[ptr]; ok {
 					// since it's gc-ed, queue is impossible to hold net.Conn
 					// we don't have to send to chIOCompletion,just release here
-					w.releaseConn(ident)
+					w.releaseConn(ident, true)
 				}
 				w.gc[i] = nil
 			}
@@ -457,8 +465,13 @@ func (w *watcher) handlePending(pending []*aiocb) {
 	for _, pcb := range pending {
 		ident, ok := w.connIdents[pcb.ptr]
 		// resource releasing operation
-		if pcb.op == opDelete && ok {
-			w.releaseConn(ident)
+		if (pcb.op == opDelete || pcb.op == OpDetach) && ok {
+			w.releaseConn(ident, pcb.op == opDelete)
+			if pcb.op == OpDetach {
+				// pass the `fd` in `size` field
+				pcb.size = ident
+				w.deliver(pcb)
+			}
 			continue
 		}
 
