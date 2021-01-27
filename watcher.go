@@ -213,8 +213,8 @@ func (w *watcher) WriteTimeout(ctx interface{}, conn net.Conn, buf []byte, deadl
 
 // Detach let the watcher to release resources related to this conn immediately, but not close the conn.
 // Then deliver the duplicated conn's `fd` in `size` field as a event.
-func (w *watcher) Detach(conn net.Conn) error {
-	return w.aioCreate(nil, OpDetach, conn, nil, zeroTime, false)
+func (w *watcher) Detach(ctx interface{}, conn net.Conn) error {
+	return w.aioCreate(ctx, OpDetach, conn, nil, zeroTime, false)
 }
 
 // Free let the watcher to release resources related to this conn immediately,
