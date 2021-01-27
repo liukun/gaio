@@ -225,10 +225,6 @@ func (w *watcher) Free(conn net.Conn) error {
 
 // core async-io creation
 func (w *watcher) aioCreate(ctx interface{}, op OpType, conn net.Conn, buf []byte, deadline time.Time, readfull bool) error {
-	select {
-	case <-w.die:
-		return ErrWatcherClosed
-	default:
 		var ptr uintptr
 		if conn != nil && reflect.TypeOf(conn).Kind() == reflect.Ptr {
 			ptr = reflect.ValueOf(conn).Pointer()
@@ -241,7 +237,6 @@ func (w *watcher) aioCreate(ctx interface{}, op OpType, conn net.Conn, buf []byt
 
 		w.notifyPending()
 		return nil
-	}
 }
 
 // tryRead will try to read data on aiocb and notify
